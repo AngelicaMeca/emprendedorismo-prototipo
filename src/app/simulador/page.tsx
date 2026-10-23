@@ -8,7 +8,7 @@ import { PantallaLlamada, PhoneMockup, type FaseLlamada } from "@/components/pho
 import { NivelBadge } from "@/components/NivelBadge";
 import { Badge, Button, Card, Field, Input, Select, Slider, Switch } from "@/components/ui";
 import { useVozReal } from "@/lib/store";
-import { analizarLlamada, familiarPorNumero } from "@/lib/engine";
+import { analizarLlamada, contextoSinHuellas, familiarPorNumero } from "@/lib/engine";
 import type { EntradaLlamada, Resultado, SenalesCapa0 } from "@/lib/types";
 import { cn, formatearNumero, normalizarNumero } from "@/lib/utils";
 
@@ -115,7 +115,7 @@ function Simulador() {
     reiniciar();
     let r: Resultado = vistaPrevia;
     try {
-      const res = await fetch("/api/analizar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entrada, contexto: store.contextoMotor() }) });
+      const res = await fetch("/api/analizar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entrada, contexto: contextoSinHuellas(store.contextoMotor()) }) });
       if (res.ok) {
         const json = await res.json();
         r = json.resultado;

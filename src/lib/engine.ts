@@ -28,6 +28,13 @@ export interface ContextoMotor {
   confirmaciones: ConfirmacionAutentica[];
 }
 
+// Copia del contexto sin plantillas biométricas, para enviar al endpoint
+// stateless: el motor no usa los embeddings (recibe la similitud ya calculada)
+// y el principio del producto es que las huellas nunca salen del dispositivo.
+export function contextoSinHuellas(ctx: ContextoMotor): ContextoMotor {
+  return { ...ctx, circulo: { ...ctx.circulo, voces: ctx.circulo.voces.map((v) => ({ ...v, embedding: [] })) } };
+}
+
 const PRIORIDAD: Record<CategoriaNumero, number> = {
   extorsion: 6,
   fraude_bancario: 5,
@@ -229,7 +236,8 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
   // ---------- Etapa 6: fusión (matriz Capa 2 × Capa 3) ----------
   const identidadInvocada = !!familiarNum || entrada.invocaParentesco;
   let nivelAcustico: Nivel = 1;
-  const senalesAdversas = senalFuerteCapa0 || (categoria != null && categoria !== "institucional_verificado");
+  // El spam comercial es higiene (nivel 1 con etiqueta), no una señal adversa que condicione la fusión.
+  const senalesAdversas = senalFuerteCapa0 || (categoria != null && categoria !== "institucional_verificado" && categoria !== "spam_comercial");
 
   if (capa2 === "natural") {
     if (capa3 === "coincide") nivelAcustico = 0;
@@ -262,7 +270,9 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
   }
 
   // ---------- Etapa 5: factor de conocimiento ----------
-  let nivel: Nivel = Math.max(nivelPre, nivelAcustico) as Nivel;
+  // El gris previo al descuelgue (1) significa "sin datos": no debe impedir el verde acústico.
+  // Solo un nivel previo adverso (>= 2) se impone sobre el resultado de las Capas 2 y 3.
+  let nivel: Nivel = nivelPre >= 2 ? (Math.max(nivelPre, nivelAcustico) as Nivel) : nivelAcustico;
   let discreto = false;
   let reforzado = false;
   let efecto = "La palabra clave no modificó el nivel.";
