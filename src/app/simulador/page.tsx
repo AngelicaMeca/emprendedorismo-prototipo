@@ -9,6 +9,7 @@ import { NivelBadge } from "@/components/NivelBadge";
 import { Badge, Button, Card, Field, Input, Select, Slider, Switch } from "@/components/ui";
 import { useVozReal } from "@/lib/store";
 import { analizarLlamada, contextoSinHuellas, familiarPorNumero } from "@/lib/engine";
+import { ejecutarAviso } from "@/lib/aviso";
 import type { EntradaLlamada, Resultado, SenalesCapa0 } from "@/lib/types";
 import { cn, formatearNumero, normalizarNumero } from "@/lib/utils";
 
@@ -68,7 +69,32 @@ function Simulador() {
   const [eventoId, setEventoId] = useState<string | null>(null);
   const [acciones, setAcciones] = useState<string[]>([]);
   const [viaApi, setViaApi] = useState<number | null>(null);
+  const [vibrando, setVibrando] = useState(false);
+  const [linterna, setLinterna] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Aviso físico: se dispara al aparecer la alerta y al entrar en Modo Resguardo.
+  useEffect(() => {
+    if (!resultado) return;
+    const hooks = {
+      onVibrar: (ms: number) => {
+        setVibrando(true);
+        timers.current.push(setTimeout(() => setVibrando(false), ms));
+      },
+      onLinterna: () => {
+        setLinterna(true);
+        timers.current.push(setTimeout(() => setLinterna(false), 1600));
+      },
+    };
+    const aviso = fase === "alerta" ? resultado.aviso : fase === "resguardo" ? { vibracion: config.alertas.vibracion ? [200] : [], tono: false, linterna: false, repetirMs: null } : null;
+    if (!aviso) return;
+    const cancelar = ejecutarAviso(aviso, hooks);
+    return () => {
+      cancelar();
+      setVibrando(false);
+      setLinterna(false);
+    };
+  }, [fase, resultado, config.alertas.vibracion]);
 
   const limpiarTimers = () => {
     timers.current.forEach(clearTimeout);
@@ -162,6 +188,14 @@ function Simulador() {
       return;
     }
     if (a === "cerrar resguardo") return setFase("finalizada");
+    if (a === "Bloquear") {
+      setAcciones((x) => [...x, "Bloqueó el número y lo reportó a la comunidad"]);
+      return;
+    }
+    if (a === "Pedile la clave") {
+      setAcciones((x) => [...x, "Tocó “Pedile la clave”: la pantalla muestra la pista y la pregunta de desafío"]);
+      return;
+    }
     if (a === "era mi familiar" && eventoId) {
       marcarFeedback(eventoId, "era_familiar");
       setAcciones((x) => [...x, "Marcó la alerta como falsa alarma: histéresis activada para este número"]);
@@ -302,7 +336,7 @@ function Simulador() {
 
         {/* Columna central: teléfono */}
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <PhoneMockup>
+          <PhoneMockup vibrando={vibrando} linterna={linterna}>
             <PantallaLlamada
               fase={fase}
               numero={entrada.numero}
@@ -348,9 +382,13 @@ function Simulador() {
                 <dd className="font-medium text-slate-900">Nivel {mostrado.nivelPreAtencion}</dd>
               </div>
               <div className="rounded-lg bg-slate-50 p-2.5">
-                <dt className="text-slate-500">Háptica / sonido</dt>
+                <dt className="text-slate-500">Aviso físico</dt>
                 <dd className="font-medium text-slate-900">
-                  {mostrado.haptica} · {mostrado.sonido}
+                  Vibración: {mostrado.haptica}
+                  <br />
+                  Tono: {mostrado.sonido}
+                  <br />
+                  Linterna: {mostrado.aviso.linterna ? "3 destellos" : mostrado.nivel === 4 && !mostrado.discreto ? "Desactivada" : "No"}
                 </dd>
               </div>
               <div className="rounded-lg bg-slate-50 p-2.5">

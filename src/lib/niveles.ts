@@ -10,7 +10,7 @@ export const NIVELES: Record<
     color: "verde",
     descripcion: "La voz coincide con un familiar enrolado y no hay artefactos de síntesis.",
     disparador: "Similitud biométrica sobre el umbral alto y probabilidad de síntesis bajo el umbral bajo.",
-    manifestacion: "Banda verde delgada en el borde superior con nombre y foto del familiar. Sin sonido ni vibración.",
+    manifestacion: "Banda verde arriba: “Es Marcela”. Sin vibración, sin sonido, sin linterna.",
     accion: "Ninguna. El sistema tranquiliza y desaparece a los pocos segundos.",
   },
   1: {
@@ -19,7 +19,7 @@ export const NIVELES: Record<
     color: "gris",
     descripcion: "Número desconocido sin señales adversas. Estado por defecto de la mayoría de las llamadas.",
     disparador: "Sin reputación negativa, sin invocación de parentesco, habla natural.",
-    manifestacion: "Sin superposición alguna. Silencio deliberado para evitar la fatiga de alerta.",
+    manifestacion: "Nada en pantalla ni en el cuerpo del teléfono. Silencio deliberado para evitar la fatiga de alerta.",
     accion: "Ninguna.",
   },
   2: {
@@ -28,8 +28,8 @@ export const NIVELES: Record<
     color: "amarillo",
     descripcion: "Score ambiguo, audio degradado, número sin reputación o línea activada hace menos de 72 h.",
     disparador: "Resultado indeterminado en alguna capa o techo por calidad de señal.",
-    manifestacion: "Banda ámbar de una línea: “No pudimos verificar quién está hablando”.",
-    accion: "Sugerir altavoz para mejorar el análisis y botón de pregunta de desafío.",
+    manifestacion: "Banda ámbar: “No sabemos quién habla”. Una vibración corta, para que mire la pantalla. Sin sonido.",
+    accion: "Dos botones: “Poner altavoz” y “Pedile la clave” (muestra la pista y la pregunta de desafío).",
   },
   3: {
     nombre: "Naranja · Llamada automatizada o comercial",
@@ -37,8 +37,8 @@ export const NIVELES: Record<
     color: "naranja",
     descripcion: "Habla sintética o patrón de robocall en un número no asociado a ningún familiar.",
     disparador: "Síntesis detectada sin candidato familiar, o reputación de robocall / fraude bancario.",
-    manifestacion: "Banda naranja: “Esto parece un robot, no una persona”. Doble vibración corta.",
-    accion: "Cortar, bloquear y reportar el número a la base comunitaria.",
+    manifestacion: "Banda naranja: “Es un robot, no una persona”. Dos vibraciones cortas. Sin sonido.",
+    accion: "Dos botones: “Cortar” y “Bloquear” (bloquear también reporta el número a la comunidad).",
   },
   4: {
     nombre: "Rojo · Posible suplantación de un familiar",
@@ -46,8 +46,8 @@ export const NIVELES: Record<
     color: "rojo",
     descripcion: "La llamada invoca la identidad de un familiar y la voz presenta síntesis o no alcanza la similitud.",
     disparador: "Identidad familiar invocada + artefactos de síntesis o similitud bajo el umbral.",
-    manifestacion: "Superposición completa, alto contraste, 28sp o más: “Atención: esta voz no suena como la de tu hija”. Vibración larga y tono discreto.",
-    accion: "Pedir la palabra clave, pregunta de desafío, aviso al guardián y botón de cortar. Nunca corta por su cuenta.",
+    manifestacion: "Pantalla roja completa, letra de 28sp: “Puede no ser tu hija” y una sola línea: “No des dinero ni datos”. Vibración larga que se repite cada 8 s, dos tonos graves solo por el auricular y, si el guardián la activó, tres destellos de linterna.",
+    accion: "Dos botones grandes: “Cortar” y “Pedile la clave”. El aviso al guardián sale solo. Nunca corta por su cuenta.",
   },
   5: {
     nombre: "Modo Resguardo (posterior a la llamada)",
@@ -55,7 +55,7 @@ export const NIVELES: Record<
     color: "resguardo",
     descripcion: "Se activa al finalizar cualquier llamada que haya alcanzado el nivel rojo.",
     disparador: "Fin de una llamada en nivel 4.",
-    manifestacion: "Pantalla de contención con tres instrucciones en lenguaje llano y letra grande.",
+    manifestacion: "Pantalla de contención con tres instrucciones en lenguaje llano y letra grande. Una vibración corta al aparecer.",
     accion: "No transferir dinero; llamar al familiar al número de la agenda; avisar al guardián y exportar el registro.",
   },
 };
@@ -155,4 +155,14 @@ export const NIVEL_HEX: Record<Nivel | 5, string> = {
   3: "#ea580c",
   4: "#dc2626",
   5: "#4f46e5",
+};
+
+// Especificación del aviso físico por nivel (qué hace el cuerpo del teléfono).
+export const AVISO_POR_NIVEL: Record<Nivel | 5, { vibracion: string; tono: string; linterna: string }> = {
+  0: { vibracion: "No", tono: "No", linterna: "No" },
+  1: { vibracion: "No", tono: "No", linterna: "No" },
+  2: { vibracion: "1 corta (0,2 s)", tono: "No", linterna: "No" },
+  3: { vibracion: "2 cortas", tono: "No", linterna: "No" },
+  4: { vibracion: "1 larga (0,7 s) ×2, se repite cada 8 s", tono: "2 tonos graves por auricular", linterna: "3 destellos (opcional)" },
+  5: { vibracion: "1 corta", tono: "No", linterna: "No" },
 };

@@ -19,6 +19,7 @@ export const COLORES_VOZ = ["#0f766e", "#7c3aed", "#b45309", "#be185d", "#1d4ed8
 
 export const CONFIG_INICIAL: Configuracion = {
   sensibilidad: "equilibrada",
+  alertas: { vibracion: true, tono: true, linterna: false },
   umbrales: { ...PRESETS_SENSIBILIDAD.equilibrada },
   bloqueoSilencioso: false,
   modoSusurro: true,

@@ -3,6 +3,8 @@
 // ninguna puede reducirlo a verde por sí sola.
 
 import type {
+  AlertasFisicas,
+  AvisoFisico,
   CategoriaNumero,
   Circulo,
   Configuracion,
@@ -325,6 +327,8 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
     .reduce((s, p) => s + p.ms, 0);
 
   // ---------- Mensajes del semáforo (5.8) ----------
+  // Regla de redacción para la persona protegida: una idea por alerta, título de
+  // 3 a 6 palabras, una línea de consejo como máximo y no más de dos botones.
   const fam = candidato ?? invocado ?? familiarNum;
   const nombreFam = fam?.nombre.split(" ")[0] ?? "tu familiar";
   const etiquetaFam = etiquetaFamiliar(fam);
@@ -332,8 +336,6 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
   let titulo = "";
   let mensaje = "";
   let acciones: string[] = [];
-  let haptica = "Ninguna";
-  let sonido = "Ninguno";
 
   if (bloqueoSilencioso) {
     titulo = "Bloqueo silencioso";
@@ -343,49 +345,46 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
     titulo = "Sin cartel visible";
     mensaje = "Aviso silencioso enviado al guardián. La pantalla no cambia para no delatar al usuario.";
     acciones = ["Aviso enviado al guardián (modo discreto)"];
-    haptica = "Ninguna (modo discreto)";
   } else {
     switch (nivel) {
       case 0:
-        titulo = reforzado ? "Verificado por voz y palabra clave" : `Voz verificada: ${nombreFam}`;
-        mensaje = reforzado ? `${nombreFam} dijo la palabra clave y su voz coincide.` : `La voz coincide con ${etiquetaFam}.`;
+        titulo = `Es ${nombreFam}`;
+        mensaje = reforzado ? "Voz y palabra clave correctas." : `La voz coincide con ${etiquetaFam}.`;
         break;
       case 1:
         titulo = "Sin superposición";
         mensaje = "Número desconocido sin señales adversas. Silencio de interfaz deliberado.";
         break;
       case 2:
-        titulo = "No pudimos verificar quién está hablando";
-        mensaje = "Poné el altavoz para que el análisis mejore.";
-        acciones = ["Poner altavoz", "Ver pregunta de desafío"];
-        if (mostrarBotonPalabra) acciones.unshift("Pedile la palabra clave");
+        titulo = "No sabemos quién habla";
+        mensaje = "Poné el altavoz.";
+        acciones = ["Poner altavoz", "Pedile la clave"];
         break;
       case 3:
-        titulo = categoria === "fraude_bancario" ? "Posible fraude institucional" : "Esto parece un robot, no una persona";
-        mensaje =
-          categoria === "fraude_bancario"
-            ? "Ninguna entidad pide claves ni transferencias por teléfono."
-            : "Detectamos una voz automatizada. Podés cortar sin culpa.";
-        acciones = ["Cortar", "Bloquear número", "Reportar a la comunidad"];
-        haptica = "Doble vibración corta";
+        titulo = categoria === "fraude_bancario" ? "Puede ser un banco falso" : "Es un robot, no una persona";
+        mensaje = categoria === "fraude_bancario" ? "El banco nunca pide claves." : "Podés cortar.";
+        acciones = ["Cortar", "Bloquear"];
         break;
       case 4:
         if (entrada.palabraIdentificacion === "dicha" && capa2 === "sintetica") {
-          titulo = "Atención: dijo la palabra clave, pero esta voz no es humana";
+          titulo = "Dijo la clave, pero la voz es falsa";
         } else if (categoria === "extorsion" && capa2 !== "sintetica" && !identidadInvocada) {
-          titulo = "Atención: este número fue denunciado por extorsión";
+          titulo = "Número denunciado por estafa";
         } else if (entrada.palabraIdentificacion === "incorrecta_tras_pedido") {
-          titulo = "Atención: la palabra clave no fue correcta";
+          titulo = "La clave no es correcta";
         } else {
-          titulo = `Atención: esta voz no suena como la de ${etiquetaFam}`;
+          titulo = fam ? `Puede no ser ${nombreFam}` : "Puede no ser tu familiar";
         }
-        mensaje = "No pudimos confirmar que sea quien dice ser. No transfieras dinero. Verificá antes de seguir.";
-        acciones = ["Pedile la palabra clave", "Hacer la pregunta de desafío", "Avisar al guardián", "Cortar"];
-        haptica = "Vibración larga";
-        sonido = config.modoSusurro ? "Tono discreto + susurro por auricular" : "Tono discreto";
+        mensaje = "No des dinero ni datos.";
+        acciones = ["Cortar", "Pedile la clave"];
         break;
     }
   }
+
+  // ---------- Aviso físico (vibración, tono, linterna) ----------
+  const aviso = avisoFisico(nivel, { discreto, bloqueoSilencioso }, config.alertas);
+  const haptica = describirVibracion(aviso, discreto);
+  const sonido = !aviso.tono ? (nivel === 4 && !discreto && !config.alertas.tono ? "Tono desactivado" : "Ninguno") : config.modoSusurro ? "Dos tonos graves por auricular + susurro" : "Dos tonos graves por auricular";
 
   const avisarGuardian = nivel === 4 && !bloqueoSilencioso;
 
@@ -400,6 +399,7 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
     acciones,
     haptica,
     sonido,
+    aviso,
     avisarGuardian,
     modoResguardo: avisarGuardian,
     susurro: nivel === 4 && config.modoSusurro && !discreto,
@@ -422,6 +422,38 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
     preguntaDesafio: nivel >= 2 && !discreto && !bloqueoSilencioso ? pregunta?.pregunta : undefined,
     mostrarBotonPalabra,
   };
+}
+
+// Patrones de vibración en ms (vibrar, pausa, vibrar…), según el apartado 5.8.
+export const VIBRACION_POR_NIVEL: Record<Nivel, number[]> = {
+  0: [],
+  1: [],
+  2: [200],
+  3: [150, 100, 150],
+  4: [700, 200, 700],
+};
+
+const SIN_AVISO: AvisoFisico = { vibracion: [], tono: false, linterna: false, repetirMs: null };
+
+// Qué hace físicamente el teléfono en cada nivel, respetando la configuración del guardián.
+export function avisoFisico(nivel: Nivel, estado: { discreto: boolean; bloqueoSilencioso: boolean }, alertas: AlertasFisicas): AvisoFisico {
+  // Coacción o bloqueo silencioso: el teléfono no hace absolutamente nada.
+  if (estado.discreto || estado.bloqueoSilencioso) return SIN_AVISO;
+  return {
+    vibracion: alertas.vibracion ? VIBRACION_POR_NIVEL[nivel] : [],
+    tono: nivel === 4 && alertas.tono,
+    linterna: nivel === 4 && alertas.linterna,
+    repetirMs: nivel === 4 && alertas.vibracion ? 8000 : null,
+  };
+}
+
+function describirVibracion(aviso: AvisoFisico, discreto: boolean): string {
+  if (discreto) return "Ninguna (modo discreto)";
+  const n = aviso.vibracion.filter((_, i) => i % 2 === 0).length;
+  if (n === 0) return "Ninguna";
+  const larga = aviso.vibracion[0] >= 500;
+  const base = n === 1 ? (larga ? "Una vibración larga" : "Una vibración corta") : `${n === 2 ? "Dos" : n} vibraciones ${larga ? "largas" : "cortas"}`;
+  return aviso.repetirMs ? `${base}, se repite a los ${aviso.repetirMs / 1000} s` : base;
 }
 
 export function resumenResultado(r: Resultado): string {

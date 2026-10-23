@@ -91,8 +91,19 @@ export interface Umbrales {
   calidadMinima: number; // techo amarillo por SNR
 }
 
+// Canales físicos con los que el teléfono avisa a la persona protegida.
+// El teléfono está en la oreja durante la llamada: la vibración es el canal
+// principal; el tono suena solo por el auricular; la linterna es opcional
+// (hipoacusia) porque el flash apunta hacia afuera y solo sirve con altavoz.
+export interface AlertasFisicas {
+  vibracion: boolean;
+  tono: boolean;
+  linterna: boolean;
+}
+
 export interface Configuracion {
   sensibilidad: Sensibilidad;
+  alertas: AlertasFisicas;
   umbrales: Umbrales;
   bloqueoSilencioso: boolean;
   modoSusurro: boolean;
@@ -140,6 +151,14 @@ export interface FasePipeline {
   ejecutada: boolean;
 }
 
+// Qué hace físicamente el teléfono al mostrar la alerta (ya filtrado por la configuración).
+export interface AvisoFisico {
+  vibracion: number[]; // patrón en ms (vibrar, pausa, vibrar…); vacío = no vibra
+  tono: boolean; // dos tonos graves por el auricular, inaudibles para quien llama
+  linterna: boolean; // tres destellos del flash
+  repetirMs: number | null; // vuelve a vibrar si la llamada sigue en rojo
+}
+
 export interface Resultado {
   nivel: Nivel;
   nivelPreAtencion: Nivel;
@@ -151,6 +170,7 @@ export interface Resultado {
   acciones: string[];
   haptica: string;
   sonido: string;
+  aviso: AvisoFisico;
   avisarGuardian: boolean;
   modoResguardo: boolean;
   susurro: boolean;

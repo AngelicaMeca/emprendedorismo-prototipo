@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analizarLlamada, contextoSinHuellas, type ContextoMotor } from "./engine";
+import { analizarLlamada, avisoFisico, contextoSinHuellas, type ContextoMotor } from "./engine";
 import { CIRCULO_INICIAL, CONFIG_INICIAL, NUMEROS_INICIALES, PREGUNTAS_INICIALES } from "./seed";
 import type { EntradaLlamada } from "./types";
 
@@ -79,6 +79,7 @@ describe("motor de decisión · escenarios del simulador", () => {
     expect(r.discreto).toBe(true);
     expect(r.avisarGuardian).toBe(true);
     expect(r.haptica).toContain("discreto");
+    expect(r.aviso).toEqual({ vibracion: [], tono: false, linterna: false, repetirMs: null });
   });
 
   it("hijo real con mala señal → amarillo (techo por calidad)", () => {
@@ -108,7 +109,7 @@ describe("motor de decisión · escenarios del simulador", () => {
   it("falso banco → naranja con advertencia institucional", () => {
     const r = analizarLlamada({ ...BASE, numero: "+5491133221100", probSintesis: 0.4, calidadMuestra: 0.7 }, ctx());
     expect(r.nivel).toBe(3);
-    expect(r.titulo).toContain("fraude institucional");
+    expect(r.titulo).toContain("banco falso");
   });
 
   it("número de extorsión denunciado → rojo desde el repique", () => {
@@ -153,5 +154,64 @@ describe("motor de decisión · reglas transversales", () => {
     // El motor da el mismo resultado con o sin huellas
     const e = { ...BASE, numero: MARCELA, similitudBiometrica: 0.91, mejorCandidatoId: "voz_marcela", probSintesis: 0.05, calidadMuestra: 0.88 };
     expect(analizarLlamada(e, limpio).nivel).toBe(analizarLlamada(e, original).nivel);
+  });
+});
+
+describe("textos y aviso físico de la alerta", () => {
+  const ALERTAS = CONFIG_INICIAL.alertas;
+  const ROJO: EntradaLlamada = { ...BASE, numero: "", numeroOculto: true, invocaParentesco: true, familiarInvocadoId: "voz_marcela", similitudBiometrica: 0.3, mejorCandidatoId: "voz_marcela", probSintesis: 0.85, calidadMuestra: 0.8 };
+
+  it("verde: título corto con el nombre y sin aviso físico", () => {
+    const r = analizarLlamada({ ...BASE, numero: MARCELA, similitudBiometrica: 0.91, mejorCandidatoId: "voz_marcela", probSintesis: 0.05, calidadMuestra: 0.88 }, ctx());
+    expect(r.titulo).toBe("Es Marcela");
+    expect(r.acciones).toEqual([]);
+    expect(r.aviso.vibracion).toEqual([]);
+    expect(r.aviso.tono).toBe(false);
+  });
+
+  it("rojo: título de pocas palabras, una línea, dos botones, vibración larga repetida y tono", () => {
+    const r = analizarLlamada(ROJO, ctx());
+    expect(r.nivel).toBe(4);
+    expect(r.titulo).toBe("Puede no ser Marcela");
+    expect(r.titulo.split(" ").length).toBeLessThanOrEqual(6);
+    expect(r.mensaje).toBe("No des dinero ni datos.");
+    expect(r.acciones).toEqual(["Cortar", "Pedile la clave"]);
+    expect(r.aviso).toEqual({ vibracion: [700, 200, 700], tono: true, linterna: false, repetirMs: 8000 });
+    expect(r.avisarGuardian).toBe(true);
+  });
+
+  it("ningún nivel ofrece más de dos botones", () => {
+    const casos: EntradaLlamada[] = [
+      { ...BASE, numero: ROBERTO, similitudBiometrica: 0.6, mejorCandidatoId: "voz_roberto", probSintesis: 0.33, calidadMuestra: 0.2 },
+      { ...BASE, numero: "+5491122334455", probSintesis: 0.9, calidadMuestra: 0.7 },
+      { ...BASE, numero: "+5491133221100", probSintesis: 0.4, calidadMuestra: 0.7 },
+      ROJO,
+    ];
+    for (const e of casos) expect(analizarLlamada(e, ctx()).acciones.length).toBeLessThanOrEqual(2);
+  });
+
+  it("aviso físico por nivel con la configuración por defecto", () => {
+    const estado = { discreto: false, bloqueoSilencioso: false };
+    expect(avisoFisico(0, estado, ALERTAS).vibracion).toEqual([]);
+    expect(avisoFisico(1, estado, ALERTAS).vibracion).toEqual([]);
+    expect(avisoFisico(2, estado, ALERTAS)).toEqual({ vibracion: [200], tono: false, linterna: false, repetirMs: null });
+    expect(avisoFisico(3, estado, ALERTAS)).toEqual({ vibracion: [150, 100, 150], tono: false, linterna: false, repetirMs: null });
+    expect(avisoFisico(4, estado, ALERTAS).linterna).toBe(false);
+  });
+
+  it("la linterna solo se enciende en rojo y si el guardián la activó", () => {
+    const con = { ...ALERTAS, linterna: true };
+    const estado = { discreto: false, bloqueoSilencioso: false };
+    expect(avisoFisico(4, estado, con).linterna).toBe(true);
+    expect(avisoFisico(3, estado, con).linterna).toBe(false);
+    expect(avisoFisico(4, { ...estado, discreto: true }, con).linterna).toBe(false);
+  });
+
+  it("apagar vibración y tono deja el rojo solo con pantalla", () => {
+    const r = analizarLlamada(ROJO, ctx({ config: { ...CONFIG_INICIAL, alertas: { vibracion: false, tono: false, linterna: false } } }));
+    expect(r.nivel).toBe(4);
+    expect(r.aviso).toEqual({ vibracion: [], tono: false, linterna: false, repetirMs: null });
+    expect(r.haptica).toBe("Ninguna");
+    expect(r.sonido).toBe("Tono desactivado");
   });
 });

@@ -68,6 +68,30 @@ export default function ConfiguracionPage() {
           </div>
         </Card>
 
+        <Card title="Cómo avisa el teléfono" subtitle="Durante la llamada el teléfono está en la oreja: la vibración es el canal principal">
+          <Switch
+            checked={config.alertas.vibracion}
+            onChange={(v) => actualizarConfig({ alertas: { ...config.alertas, vibracion: v } })}
+            label="Vibración"
+            descripcion="Amarillo: una corta. Naranja: dos cortas. Rojo: una larga que se repite cada 8 s mientras siga la llamada."
+          />
+          <Switch
+            checked={config.alertas.tono}
+            onChange={(v) => actualizarConfig({ alertas: { ...config.alertas, tono: v } })}
+            label="Tono por auricular (solo en rojo)"
+            descripcion="Dos tonos graves que solo escucha la persona protegida, no quien llama. Ningún otro nivel suena."
+          />
+          <Switch
+            checked={config.alertas.linterna}
+            onChange={(v) => actualizarConfig({ alertas: { ...config.alertas, linterna: v } })}
+            label="Linterna (solo en rojo)"
+            descripcion="Tres destellos del flash. Pensada para personas con hipoacusia que hablan con altavoz: con el teléfono en la oreja el flash apunta hacia afuera y no se ve."
+          />
+          <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+            Verde y gris nunca vibran ni suenan. La palabra de coacción y el bloqueo silencioso no producen ningún aviso en el teléfono.
+          </div>
+        </Card>
+
         <Card title="Aviso al guardián (F7)" subtitle="Con número, hora y nivel de riesgo. Nunca con audio.">
           <Switch checked={config.avisoGuardian.push} onChange={(v) => actualizarConfig({ avisoGuardian: { ...config.avisoGuardian, push: v } })} label="Notificación push" />
           <Switch checked={config.avisoGuardian.sms} onChange={(v) => actualizarConfig({ avisoGuardian: { ...config.avisoGuardian, sms: v } })} label="SMS de respaldo" descripcion="Para zonas sin datos móviles. En modo de red asistida lo envía la operadora." />

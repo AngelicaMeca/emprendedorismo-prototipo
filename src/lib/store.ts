@@ -250,6 +250,11 @@ export const useVozReal = create<EstadoVozReal>()(
         notificaciones: s.notificaciones,
         confirmaciones: s.confirmaciones,
       }),
+      // Configuraciones guardadas antes de que existiera un campo toman el valor por defecto.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<typeof current>;
+        return { ...current, ...p, config: { ...CONFIG_INICIAL, ...(p.config ?? {}), alertas: { ...CONFIG_INICIAL.alertas, ...(p.config?.alertas ?? {}) } } };
+      },
       onRehydrateStorage: () => (state) => {
         state?.setHydrated();
       },
