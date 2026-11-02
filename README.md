@@ -66,3 +66,7 @@ src/
   components/     UI, mockup del teléfono, grabador, shell del panel
   lib/            tipos, motor de decisión, niveles, semilla de datos, audio, store (zustand + persist)
 ```
+
+## Pendientes de diseño
+
+- **Palabra clave filtrada y botón “Pedile la clave” en rojo.** En el escenario *Palabra clave filtrada* el atacante dice la clave correcta desde un número desconocido y el motor igual marca rojo porque la voz no coincide: una vez que la biometría falla, el sistema deja de confiar en la clave. Sin embargo, la pantalla roja sigue ofreciendo “Pedile la clave”, que en ese caso no aporta nada. Es una decisión de diseño a discutir (¿ocultar el botón cuando la clave ya fue dicha y descartada?, ¿reemplazarlo por la pregunta de desafío?), no un bug. No tocar hasta definirlo.

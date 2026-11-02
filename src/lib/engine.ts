@@ -154,8 +154,24 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
   let bloqueoSilencioso = false;
   let etiquetaEntrante: Resultado["etiquetaEntrante"] = null;
 
-  if (familiarNum && !verdePorNumeroInhabilitado) {
-    etiquetaEntrante = { texto: `${familiarNum.nombre} · familiar enrolado`, tono: "verde" };
+  if (familiarNum) {
+    // El Caller ID se puede falsificar, así que por sí solo no alcanza para el verde.
+    // "Familiar enrolado" en verde exige reputación positivamente limpia: señales de red
+    // de la operadora (Capa 0) sin ningún indicio. Una confirmación previa del número no
+    // sirve, porque la suplantación reutiliza exactamente ese número. Sin esa evidencia,
+    // o con cualquier señal dudosa, la etiqueta es neutra: "verificando".
+    const reputacionDudosa = senalFuerteCapa0 || verdePorNumeroInhabilitado || heur.length > 0 || indicios0.length > 0;
+    const reputacionLimpia = !reputacionDudosa && capa0Aplicada;
+    etiquetaEntrante = reputacionLimpia
+      ? { texto: `${familiarNum.nombre} · familiar enrolado`, tono: "verde" }
+      : { texto: `${familiarNum.nombre} · verificando`, tono: "gris" };
+    razones.push(
+      reputacionLimpia
+        ? "Etiqueta de entrada verde: el número es de un familiar y las señales de red de la operadora no muestran indicios."
+        : reputacionDudosa
+          ? "Etiqueta de entrada neutra (“verificando”): el número figura como familiar pero hay señales dudosas antes de atender."
+          : "Etiqueta de entrada neutra (“verificando”): el Caller ID coincide con un familiar, pero sin señales de red de la operadora no alcanza para afirmarlo en verde.",
+    );
   }
   if (categoria) {
     const cat = CATEGORIAS[categoria];
@@ -331,6 +347,9 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
   // 3 a 6 palabras, una línea de consejo como máximo y no más de dos botones.
   const fam = candidato ?? invocado ?? familiarNum;
   const nombreFam = fam?.nombre.split(" ")[0] ?? "tu familiar";
+  // Suplantación de un familiar concreto: el que llama aporta algo propio de ese familiar
+  // (su número en el Caller ID o su palabra clave). Decir "soy tu nieto" no alcanza.
+  const suplantaFamiliar = !!familiarNum || (identidadInvocada && entrada.palabraIdentificacion === "dicha");
   const etiquetaFam = etiquetaFamiliar(fam);
   const pregunta = preguntas.find((p) => p.familiarId === fam?.id) ?? preguntas[0];
   let titulo = "";
@@ -372,8 +391,11 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
           titulo = "Número denunciado por estafa";
         } else if (entrada.palabraIdentificacion === "incorrecta_tras_pedido") {
           titulo = "La clave no es correcta";
+        } else if (suplantaFamiliar) {
+          titulo = `Puede no ser ${nombreFam}`;
         } else {
-          titulo = fam ? `Puede no ser ${nombreFam}` : "Puede no ser tu familiar";
+          // Desconocido sin familiar concreto en juego: no hay a quién "no ser".
+          titulo = "No es un contacto conocido, puede ser una estafa";
         }
         mensaje = "No des dinero ni datos.";
         acciones = ["Cortar", "Pedile la clave"];
@@ -401,6 +423,7 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
     sonido,
     aviso,
     avisarGuardian,
+    suplantaFamiliar,
     modoResguardo: avisarGuardian,
     susurro: nivel === 4 && config.modoSusurro && !discreto,
     razones,

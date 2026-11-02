@@ -60,6 +60,16 @@ export const NIVELES: Record<
   },
 };
 
+// El naranja cubre dos situaciones distintas: robot/comercial y fraude institucional
+// activo (falso banco). El nivel es el mismo; cambia el nombre que ve el guardián.
+// El rojo nombra "suplantación de un familiar" solo cuando apunta a un familiar enrolado
+// concreto (Resultado.suplantaFamiliar); desde un desconocido genérico es "posible estafa".
+export function nombreNivel(nivel: Nivel | 5, categoria?: CategoriaNumero | null, suplantaFamiliar = true): string {
+  if (nivel === 3 && categoria === "fraude_bancario") return "Naranja · Posible fraude institucional";
+  if (nivel === 4 && !suplantaFamiliar) return "Rojo · Posible estafa";
+  return NIVELES[nivel].nombre;
+}
+
 export const CATEGORIAS: Record<
   CategoriaNumero,
   { nombre: string; criterio: string; respuesta: string; nivel: Nivel | null; tono: "verde" | "gris" | "amarillo" | "naranja" | "rojo" }

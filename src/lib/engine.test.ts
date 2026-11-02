@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { analizarLlamada, avisoFisico, contextoSinHuellas, type ContextoMotor } from "./engine";
+import { nombreNivel } from "./niveles";
 import { CIRCULO_INICIAL, CONFIG_INICIAL, NUMEROS_INICIALES, PREGUNTAS_INICIALES } from "./seed";
 import type { EntradaLlamada } from "./types";
 
@@ -61,7 +62,7 @@ describe("motor de decisión · escenarios del simulador", () => {
     );
     expect(r.nivel).toBe(4);
     expect(r.capas.capa3.modo).toBe("1:N");
-    expect(r.titulo).toContain("Julián");
+    expect(r.titulo).toBe("No es un contacto conocido, puede ser una estafa");
   });
 
   it("palabra clave filtrada desde número desconocido → rojo", () => {
@@ -169,11 +170,9 @@ describe("textos y aviso físico de la alerta", () => {
     expect(r.aviso.tono).toBe(false);
   });
 
-  it("rojo: título de pocas palabras, una línea, dos botones, vibración larga repetida y tono", () => {
+  it("rojo: una línea, dos botones, vibración larga repetida y tono", () => {
     const r = analizarLlamada(ROJO, ctx());
     expect(r.nivel).toBe(4);
-    expect(r.titulo).toBe("Puede no ser Marcela");
-    expect(r.titulo.split(" ").length).toBeLessThanOrEqual(6);
     expect(r.mensaje).toBe("No des dinero ni datos.");
     expect(r.acciones).toEqual(["Cortar", "Pedile la clave"]);
     expect(r.aviso).toEqual({ vibracion: [700, 200, 700], tono: true, linterna: false, repetirMs: 8000 });
@@ -213,5 +212,92 @@ describe("textos y aviso físico de la alerta", () => {
     expect(r.aviso).toEqual({ vibracion: [], tono: false, linterna: false, repetirMs: null });
     expect(r.haptica).toBe("Ninguna");
     expect(r.sonido).toBe("Tono desactivado");
+  });
+});
+
+describe("devolución de prueba · claridad de mensajes", () => {
+  const CAPA0_ON = { ...CONFIG_INICIAL, operadoraHabilitada: true };
+
+  it("rojo con número de un familiar enrolado (Caller ID falsificado) → “Puede no ser Julián”", () => {
+    const r = analizarLlamada(
+      { ...BASE, numero: JULIAN, invocaParentesco: true, familiarInvocadoId: "voz_julian", mejorCandidatoId: "voz_julian", similitudBiometrica: 0.79, probSintesis: 0.86, calidadMuestra: 0.74, llamadaUrgente: true },
+      ctx(),
+    );
+    expect(r.nivel).toBe(4);
+    expect(r.titulo).toBe("Puede no ser Julián");
+  });
+
+  it("rojo desde un desconocido que dice ser el nieto → mensaje genérico de estafa", () => {
+    const r = analizarLlamada(
+      { ...BASE, numero: "+5491198765432", invocaParentesco: true, familiarInvocadoId: "voz_julian", mejorCandidatoId: "voz_julian", similitudBiometrica: 0.36, probSintesis: 0.22, calidadMuestra: 0.7, llamadaUrgente: true },
+      ctx(),
+    );
+    expect(r.nivel).toBe(4);
+    expect(r.titulo).toBe("No es un contacto conocido, puede ser una estafa");
+    expect(r.mensaje).toBe("No des dinero ni datos.");
+  });
+
+  it("rojo desde un número de extorsión denunciado → mensaje genérico de estafa", () => {
+    const r = analizarLlamada(
+      { ...BASE, numero: "+5491166778899", invocaParentesco: true, familiarInvocadoId: "voz_marcela", mejorCandidatoId: "voz_marcela", similitudBiometrica: 0.3, probSintesis: 0.5, calidadMuestra: 0.7, llamadaUrgente: true },
+      ctx(),
+    );
+    expect(r.titulo).toBe("No es un contacto conocido, puede ser una estafa");
+  });
+
+  it("etiqueta de entrada: el Caller ID solo no da verde; verde solo con red limpia; dudosa → “verificando”", () => {
+    const base = { ...BASE, numero: JULIAN, invocaParentesco: true, familiarInvocadoId: "voz_julian", mejorCandidatoId: "voz_julian", similitudBiometrica: 0.79, probSintesis: 0.86, calidadMuestra: 0.74 };
+    // Secuestro virtual con Capa 0 apagada: solo Caller ID → neutro.
+    const soloCallerId = analizarLlamada(base, ctx());
+    expect(soloCallerId.etiquetaEntrante).toEqual({ texto: "Julián Pérez · verificando", tono: "gris" });
+
+    const redLimpia = analizarLlamada({ ...base, capa0: {} }, ctx({ config: CAPA0_ON }));
+    expect(redLimpia.etiquetaEntrante).toEqual({ texto: "Julián Pérez · familiar enrolado", tono: "verde" });
+
+    // Una confirmación previa del número no habilita el verde: la suplantación reutiliza ese mismo número.
+    const confirmado = analizarLlamada(base, ctx({ confirmaciones: [{ numero: JULIAN, fecha: new Date().toISOString() }] }));
+    expect(confirmado.etiquetaEntrante?.tono).toBe("gris");
+
+    const dudosa = analizarLlamada({ ...base, capa0: { origenInternacionalOVoip: true } }, ctx({ config: CAPA0_ON }));
+    expect(dudosa.etiquetaEntrante).toEqual({ texto: "Julián Pérez · verificando", tono: "gris" });
+
+    const simSwap = analizarLlamada({ ...base, capa0: { cambioSimReciente: true } }, ctx({ config: CAPA0_ON }));
+    expect(simSwap.etiquetaEntrante?.tono).toBe("gris");
+  });
+
+  it("chip rojo: “suplantación de un familiar” solo con número de familiar; desconocido → “Posible estafa”", () => {
+    const clonado = analizarLlamada({ ...BASE, numero: JULIAN, invocaParentesco: true, familiarInvocadoId: "voz_julian", mejorCandidatoId: "voz_julian", similitudBiometrica: 0.79, probSintesis: 0.86, calidadMuestra: 0.74 }, ctx());
+    expect(nombreNivel(clonado.nivel, clonado.capas.capa1.categoria, clonado.suplantaFamiliar)).toBe("Rojo · Posible suplantación de un familiar");
+    const desconocido = analizarLlamada({ ...BASE, numero: "+5491198765432", invocaParentesco: true, familiarInvocadoId: "voz_julian", mejorCandidatoId: "voz_julian", similitudBiometrica: 0.36, probSintesis: 0.22, calidadMuestra: 0.7 }, ctx());
+    expect(desconocido.nivel).toBe(4);
+    expect(nombreNivel(desconocido.nivel, desconocido.capas.capa1.categoria, desconocido.suplantaFamiliar)).toBe("Rojo · Posible estafa");
+  });
+
+  it("los cuatro escenarios rojos: clonado y clave filtrada apuntan a un familiar; nieto desconocido y extorsión son estafa genérica", () => {
+    const clonado = analizarLlamada({ ...BASE, numero: JULIAN, invocaParentesco: true, familiarInvocadoId: "voz_julian", mejorCandidatoId: "voz_julian", similitudBiometrica: 0.79, probSintesis: 0.86, calidadMuestra: 0.74, llamadaUrgente: true }, ctx());
+    const claveFiltrada = analizarLlamada({ ...BASE, numero: "+5491177001122", invocaParentesco: true, familiarInvocadoId: "voz_roberto", mejorCandidatoId: "voz_roberto", similitudBiometrica: 0.52, probSintesis: 0.18, calidadMuestra: 0.76, palabraIdentificacion: "dicha", llamadaUrgente: true }, ctx());
+    const nietoDesconocido = analizarLlamada({ ...BASE, numero: "+5491198765432", invocaParentesco: true, familiarInvocadoId: "voz_julian", mejorCandidatoId: "voz_julian", similitudBiometrica: 0.36, probSintesis: 0.22, calidadMuestra: 0.7, llamadaUrgente: true }, ctx());
+    const extorsion = analizarLlamada({ ...BASE, numero: "+5491166778899", invocaParentesco: true, familiarInvocadoId: "voz_marcela", mejorCandidatoId: "voz_marcela", similitudBiometrica: 0.3, probSintesis: 0.5, calidadMuestra: 0.7, llamadaUrgente: true }, ctx());
+    for (const r of [clonado, claveFiltrada, nietoDesconocido, extorsion]) expect(r.nivel).toBe(4);
+
+    expect(clonado.suplantaFamiliar).toBe(true);
+    expect(clonado.titulo).toBe("Puede no ser Julián");
+    expect(claveFiltrada.suplantaFamiliar).toBe(true);
+    expect(claveFiltrada.titulo).toBe("Puede no ser Roberto");
+    expect(nombreNivel(4, null, claveFiltrada.suplantaFamiliar)).toBe("Rojo · Posible suplantación de un familiar");
+
+    expect(nietoDesconocido.suplantaFamiliar).toBe(false);
+    expect(nietoDesconocido.titulo).toBe("No es un contacto conocido, puede ser una estafa");
+    expect(extorsion.suplantaFamiliar).toBe(false);
+    expect(extorsion.titulo).toBe("No es un contacto conocido, puede ser una estafa");
+    expect(nombreNivel(4, extorsion.capas.capa1.categoria, extorsion.suplantaFamiliar)).toBe("Rojo · Posible estafa");
+  });
+
+  it("falso banco: nivel naranja con nombre de fraude institucional, robocall mantiene el nombre genérico", () => {
+    const banco = analizarLlamada({ ...BASE, numero: "+5491133221100", probSintesis: 0.4, calidadMuestra: 0.7 }, ctx());
+    expect(banco.nivel).toBe(3);
+    expect(nombreNivel(banco.nivel, banco.capas.capa1.categoria)).toBe("Naranja · Posible fraude institucional");
+    const robot = analizarLlamada({ ...BASE, numero: "+5491122334455", probSintesis: 0.9, calidadMuestra: 0.7 }, ctx());
+    expect(nombreNivel(robot.nivel, robot.capas.capa1.categoria)).toBe("Naranja · Llamada automatizada o comercial");
   });
 });

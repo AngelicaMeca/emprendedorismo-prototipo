@@ -369,7 +369,7 @@ function Simulador() {
         <div className="space-y-5">
           <Card title="Resolución del motor" subtitle={fase === "inactivo" ? "Vista previa con las señales actuales" : viaApi != null ? `Calculado en /api/analizar en ${viaApi} ms` : "Calculado localmente"}>
             <div className="flex flex-wrap items-center gap-2">
-              <NivelBadge nivel={mostrado.nivel} discreto={mostrado.discreto} />
+              <NivelBadge nivel={mostrado.nivel} discreto={mostrado.discreto} categoria={mostrado.capas.capa1.categoria} suplantaFamiliar={mostrado.suplantaFamiliar} />
               {mostrado.reforzado && <Badge tono="verde">Reforzado</Badge>}
               {mostrado.bloqueoSilencioso && <Badge tono="gris">Bloqueo silencioso</Badge>}
               {mostrado.susurro && <Badge tono="rojo">Modo susurro</Badge>}

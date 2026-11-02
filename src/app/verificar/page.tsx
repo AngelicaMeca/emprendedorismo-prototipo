@@ -106,7 +106,7 @@ function Verificador() {
             <>
               <Card>
                 <div className="flex flex-wrap items-center gap-2">
-                  <NivelBadge nivel={resultado.nivel} />
+                  <NivelBadge nivel={resultado.nivel} categoria={resultado.capas.capa1.categoria} suplantaFamiliar={resultado.suplantaFamiliar} />
                   {registrado && <Badge tono="gris">Registrado en eventos</Badge>}
                 </div>
                 <p className="mt-3 text-xl font-semibold text-slate-900">{resultado.titulo}</p>

@@ -172,6 +172,9 @@ export interface Resultado {
   sonido: string;
   aviso: AvisoFisico;
   avisarGuardian: boolean;
+  // Rojo que apunta a un familiar enrolado concreto (número del familiar o su palabra
+  // clave), frente a un desconocido genérico. Decide "Puede no ser X" vs "Posible estafa".
+  suplantaFamiliar: boolean;
   modoResguardo: boolean;
   susurro: boolean;
   razones: string[];

@@ -108,21 +108,15 @@ export default function Home() {
                 <div className="absolute top-2 left-1/2 z-30 h-6 w-24 -translate-x-1/2 rounded-full bg-black" />
                 <div className="absolute inset-x-0 top-0 bottom-28 flex flex-col bg-red-700 px-4 pt-12 pb-3 text-white">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="mt-1 h-7 w-7 shrink-0" />
-                    <p className="text-[22px] font-bold leading-tight">Atención: esta voz no suena como la de tu hija Marcela</p>
+                    <AlertTriangle className="mt-1 h-8 w-8 shrink-0" />
+                    <p className="text-[28px] font-bold leading-[1.1]">Puede no ser Julián</p>
                   </div>
-                  <p className="mt-3 text-[15px] leading-snug text-red-50">No pudimos confirmar que sea quien dice ser. No transfieras dinero. Verificá antes de seguir.</p>
-                  <div className="mt-3 rounded-lg bg-white/15 px-3 py-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-red-100">Preguntale</p>
-                    <p className="text-sm font-medium">¿Cómo se llamaba el perro que teníamos en el campo?</p>
-                  </div>
-                  <div className="mt-auto grid grid-cols-2 gap-1.5">
-                    {["Pedile la palabra clave", "Hacer la pregunta de desafío", "Avisar al guardián"].map((a) => (
-                      <span key={a} className="rounded-lg bg-white px-2 py-2 text-center text-[12px] font-semibold text-red-700">
-                        {a}
-                      </span>
-                    ))}
-                    <span className="rounded-lg border border-white/40 px-2 py-2 text-center text-[12px] font-semibold text-white">Era mi familiar</span>
+                  <p className="mt-4 text-[20px] font-semibold leading-snug">No des dinero ni datos.</p>
+                  <p className="mt-3 text-[15px] text-red-100">Ya avisamos a Marcela.</p>
+                  <div className="mt-auto flex flex-col gap-2">
+                    <span className="flex min-h-14 items-center justify-center rounded-xl bg-white text-[22px] font-bold text-red-700">Cortar</span>
+                    <span className="flex min-h-12 items-center justify-center rounded-xl border-2 border-white text-[18px] font-bold text-white">Pedile la clave</span>
+                    <span className="py-1 text-center text-[14px] text-red-100 underline underline-offset-2">Era mi familiar</span>
                   </div>
                 </div>
                 <div className="absolute inset-x-0 bottom-0 flex h-28 items-center justify-center bg-gradient-to-b from-slate-800 to-slate-950">
