@@ -189,6 +189,8 @@ export interface Resultado {
   pipeline: FasePipeline[];
   latenciaTotalMs: number;
   preguntaDesafio?: string;
+  /** Pista de qué debería contestar (la respuesta exacta no se guarda). */
+  respuestaEsperada?: string;
   mostrarBotonPalabra: boolean;
 }
 

@@ -61,7 +61,6 @@ export function PantallaLlamada({
   resultado,
   progreso = 0,
   onAccion,
-  pistaPalabra,
   nombreProtegido,
   nombreGuardian,
   telefonoFamiliar,
@@ -73,7 +72,6 @@ export function PantallaLlamada({
   resultado: Resultado | null;
   progreso?: number;
   onAccion?: (accion: string) => void;
-  pistaPalabra?: string | null;
   nombreProtegido: string;
   nombreGuardian: string;
   telefonoFamiliar?: string | null;
@@ -175,24 +173,35 @@ export function PantallaLlamada({
       </div>
 
       {/* Overlay del semáforo cognitivo */}
-      {mostrarOverlay && resultado && <Overlay resultado={resultado} onAccion={onAccion} pistaPalabra={pistaPalabra} nombreGuardian={nombreGuardian} />}
+      {mostrarOverlay && resultado && <Overlay resultado={resultado} onAccion={onAccion} nombreGuardian={nombreGuardian} />}
     </div>
   );
 }
 
-// Caja que aparece al tocar “Pedile la clave”: pista de la palabra y pregunta de desafío.
-function CajaClave({ pista, pregunta, oscuro }: { pista?: string | null; pregunta?: string; oscuro?: boolean }) {
+// Caja que aparece al tocar “Pedile la clave”: primero la clave, después la pregunta
+// de desafío con lo que debería contestar.
+function CajaClave({ pregunta, respuesta, oscuro }: { pregunta?: string; respuesta?: string; oscuro?: boolean }) {
+  const etiqueta = cn("text-[13px] font-semibold uppercase tracking-wide", oscuro ? "text-brand-950/75" : "text-white/80");
+  const caja = cn("rounded-lg px-2.5 py-1.5", oscuro ? "bg-brand-950/10" : "bg-black/20");
   return (
-    <div className={cn("mt-2 rounded-xl px-3 py-2.5", oscuro ? "bg-brand-950/10" : "bg-white/15")}>
-      {pista && (
-        <p className="text-[15px] leading-snug">
-          Pista de la clave: <span className="font-bold">{pista}</span>
+    <div className="mt-2 space-y-2">
+      <div className={caja}>
+        <p className="flex items-center gap-1.5 text-[16px] font-bold leading-snug">
+          <KeyRound className="h-4 w-4 shrink-0" /> Pedile la clave que acordaron
         </p>
-      )}
+      </div>
       {pregunta && (
-        <p className={cn("text-[15px] leading-snug", pista && "mt-1")}>
-          Preguntale: <span className="font-bold">{pregunta}</span>
-        </p>
+        <div className={caja}>
+          <p className={cn(etiqueta, "flex items-center gap-1")}>
+            <HelpCircle className="h-3.5 w-3.5" /> Si no la sabe, preguntale
+          </p>
+          <p className="text-[16px] font-bold leading-snug">{pregunta}</p>
+          {respuesta && (
+            <p className="mt-0.5 text-[15px] leading-snug">
+              Debería responder: <span className="font-bold">{respuesta}</span>
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
@@ -207,7 +216,7 @@ function BotonAccion({ texto, onClick, estilo, icono }: { texto: string; onClick
   );
 }
 
-function Overlay({ resultado, onAccion, pistaPalabra, nombreGuardian }: { resultado: Resultado; onAccion?: (a: string) => void; pistaPalabra?: string | null; nombreGuardian: string }) {
+function Overlay({ resultado, onAccion, nombreGuardian }: { resultado: Resultado; onAccion?: (a: string) => void; nombreGuardian: string }) {
   const [mostrarClave, setMostrarClave] = useState(false);
   const n = resultado.nivel;
   const accion = (a: string) => {
@@ -235,7 +244,7 @@ function Overlay({ resultado, onAccion, pistaPalabra, nombreGuardian }: { result
           <p className="text-[20px] font-bold leading-tight">{resultado.titulo}</p>
         </div>
         {mostrarClave ? (
-          <CajaClave pista={pistaPalabra} pregunta={resultado.preguntaDesafio} oscuro />
+          <CajaClave pregunta={resultado.preguntaDesafio} respuesta={resultado.respuestaEsperada} oscuro />
         ) : (
           <div className="mt-2.5 flex gap-2">
             <BotonAccion texto="Poner altavoz" icono={<Volume2 className="h-5 w-5" />} estilo="bg-brand-950 text-white" onClick={() => accion("Poner altavoz")} />
@@ -271,7 +280,7 @@ function Overlay({ resultado, onAccion, pistaPalabra, nombreGuardian }: { result
       <p className="mt-3 flex items-center gap-1.5 text-[15px] text-red-100">
         <ShieldAlert className="h-4 w-4 shrink-0" /> Ya avisamos a {nombreGuardian.split(" ")[0]}.
       </p>
-      {mostrarClave && <CajaClave pista={pistaPalabra} pregunta={resultado.preguntaDesafio} />}
+      {mostrarClave && <CajaClave pregunta={resultado.preguntaDesafio} respuesta={resultado.respuestaEsperada} />}
       <div className="mt-auto flex flex-col gap-2">
         <button onClick={() => accion("Cortar")} className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-white text-[22px] font-bold text-red-700">
           <PhoneOff className="h-6 w-6" /> Cortar

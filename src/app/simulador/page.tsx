@@ -58,7 +58,29 @@ const PRESETS: Array<{ nombre: string; d: string; e: (b: Escenario) => Escenario
   { nombre: "Número oculto neutro", d: "Cabecera vacía, voz natural, sin parentesco.", e: (b) => ({ ...b, numero: "", numeroOculto: true, probSintesis: 0.12, calidadMuestra: 0.8 }) },
 ];
 
+// Alto del teléfono (pantalla 620px + marco) y del área del botón debajo.
+const ALTO_TELEFONO = 640;
+const ALTO_CONTROLES = 96;
+const MARGEN_SUPERIOR = 80; // header (64px) + aire
+
+/** En escritorio, achica el teléfono para que entre completo en la ventana. */
+function useEscalaTelefono() {
+  const [escala, setEscala] = useState(1);
+  useEffect(() => {
+    const calcular = () => {
+      if (window.innerWidth < 1024) return setEscala(1);
+      const disponible = window.innerHeight - MARGEN_SUPERIOR - ALTO_CONTROLES - 16;
+      setEscala(Math.min(1, Math.max(0.6, disponible / ALTO_TELEFONO)));
+    };
+    calcular();
+    window.addEventListener("resize", calcular);
+    return () => window.removeEventListener("resize", calcular);
+  }, []);
+  return escala;
+}
+
 function Simulador() {
+  const escalaTelefono = useEscalaTelefono();
   const store = useVozReal();
   const { circulo, config, palabraIdentificacion, verificarPalabra, registrarEvento, marcarFeedback } = store;
   const [esc, setEsc] = useState<Escenario>(() => PRESETS[0].e(BASE));
@@ -193,7 +215,7 @@ function Simulador() {
       return;
     }
     if (a === "Pedile la clave") {
-      setAcciones((x) => [...x, "Tocó “Pedile la clave”: la pantalla muestra la pista y la pregunta de desafío"]);
+      setAcciones((x) => [...x, "Tocó “Pedile la clave”: la pantalla pide la clave y muestra la pregunta de desafío"]);
       return;
     }
     if (a === "era mi familiar" && eventoId) {
@@ -335,7 +357,8 @@ function Simulador() {
         </div>
 
         {/* Columna central: teléfono */}
-        <div className="lg:sticky lg:top-24 lg:self-start">
+        <div className="lg:sticky lg:top-20 lg:self-start">
+          <div style={{ zoom: escalaTelefono }}>
           <PhoneMockup vibrando={vibrando} linterna={linterna}>
             <PantallaLlamada
               fase={fase}
@@ -345,13 +368,13 @@ function Simulador() {
               resultado={fase === "inactivo" ? null : resultado}
               progreso={progreso}
               onAccion={onAccion}
-              pistaPalabra={palabraIdentificacion?.pista}
               nombreProtegido={circulo.protegido.nombre}
               nombreGuardian={circulo.guardian.nombre}
               telefonoFamiliar={(circulo.voces.find((v) => v.nombre === mostrado.capas.capa3.candidato) ?? familiarNum)?.telefono ?? circulo.guardian.telefono}
             />
           </PhoneMockup>
-          <div className="mt-5 flex justify-center gap-2">
+          </div>
+          <div className="mt-4 flex justify-center gap-2">
             {fase === "inactivo" ? (
               <Button variant="accent" size="lg" onClick={iniciar}>
                 <Play className="h-4 w-4" /> Iniciar llamada

@@ -443,6 +443,7 @@ export function analizarLlamada(entrada: EntradaLlamada, ctx: ContextoMotor): Re
     pipeline,
     latenciaTotalMs,
     preguntaDesafio: nivel >= 2 && !discreto && !bloqueoSilencioso ? pregunta?.pregunta : undefined,
+    respuestaEsperada: nivel >= 2 && !discreto && !bloqueoSilencioso ? pregunta?.pista : undefined,
     mostrarBotonPalabra,
   };
 }
